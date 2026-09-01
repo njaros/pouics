@@ -26,10 +26,10 @@ func NewManager(secret string) *Manager {
 }
 
 // Generate crée un JWT signé dont le sujet est l'identifiant utilisateur.
-func (m *Manager) Generate(userID string) (string, error) {
+func (m *Manager) Generate(playerId string) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
-		Subject:   userID,
+		Subject:   playerId,
 		IssuedAt:  jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(m.ttl)),
 	}

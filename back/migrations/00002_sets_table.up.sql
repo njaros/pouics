@@ -1,6 +1,6 @@
 CREATE TABLE sets (
-	id SERIAL PRIMARY KEY,
-	player_id SERIAL REFERENCES players(id) ON DELETE CASCADE,
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	player_id UUID REFERENCES players(id) ON DELETE CASCADE,
 	max_size INT,
 	pos_x INT,
 	pos_y INT,
