@@ -1,0 +1,5 @@
+CREATE TABLE players (
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(15) UNIQUE,
+	password VARCHAR(64)
+);
