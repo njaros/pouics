@@ -10,24 +10,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"pouic/internal/common"
+	"pouic/internal/dto"
 	"pouic/internal/model"
 	"pouic/internal/repository"
 )
 
-// AuthStore décrit les opérations de persistance dont l'auth a besoin.
-// L'interface est déclarée côté consommateur pour découpler le handler du
-// repository concret (facilite les tests).
+// AuthStore handles database operations.
 type AuthStore interface {
-	Create(ctx context.Context, email, username, passwordHash string) (*model.Player, error)
-	GetByName(ctx context.Context, email string) (*model.Player, error)
+	Create(ctx context.Context, name, passwordHash string) (*model.Player, error)
+	GetByNameFull(ctx context.Context, name string) (*model.PlayerFull, error)
 }
 
-// TokenGenerator produit un token d'authentification pour un utilisateur.
+// TokenGenerator creates tokens.
 type TokenGenerator interface {
 	Generate(userID string) (string, error)
 }
 
-// AuthHandler gère l'inscription et la connexion.
+// AuthHandler handles submit and connection.
 type AuthHandler struct {
 	players  AuthStore
 	tokens   TokenGenerator
@@ -43,9 +42,9 @@ func NewAuthHandler(players AuthStore, tokens TokenGenerator) *AuthHandler {
 	}
 }
 
-// Register crée un compte, hashe le mot de passe et renvoie un token.
+// Register creates an account and returns a token.
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req model.RegisterRequest
+	var req dto.RegisterDto
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -61,7 +60,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.users.Create(r.Context(), req.Email, req.Username, passwordHash)
+	user, err := h.players.Create(r.Context(), req.Name, passwordHash)
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicate) {
 			common.WriteError(w, http.StatusConflict, "email or username already in use")
@@ -74,9 +73,9 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	h.respondWithToken(w, http.StatusCreated, user)
 }
 
-// Login vérifie les identifiants et renvoie un token.
+// Login control les credentials and send a token.
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req model.LoginRequest
+	var req dto.LoginDto
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -86,11 +85,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.users.GetByEmail(r.Context(), req.Email)
+	player, err := h.players.GetByNameFull(r.Context(), req.Name)
 	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			// Même réponse que mot de passe invalide : on ne révèle pas
-			// l'existence d'un compte.
+		if errors.Is(err, repository.ErrPlayerNotFound) {
 			common.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
@@ -98,26 +95,25 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !matchPassword(req.Password, user.Password) {
+	if !matchPassword(req.Password, player.Password) {
 		common.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
-	h.respondWithToken(w, http.StatusOK, user)
+	h.respondWithToken(w, http.StatusOK, &player.Player)
 }
 
-// respondWithToken génère un token et sérialise la réponse d'auth.
-func (h *AuthHandler) respondWithToken(w http.ResponseWriter, status int, user *model.User) {
-	tok, err := h.tokens.Generate(user.ID)
+// respondWithToken generates a token and serializes auth response.
+func (h *AuthHandler) respondWithToken(w http.ResponseWriter, status int, player *model.Player) {
+	tok, err := h.tokens.Generate(player.Id)
 	if err != nil {
 		common.WriteError(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
-	common.WriteJSON(w, status, model.AuthResponse{Token: tok, User: *user})
+	common.WriteJSON(w, status, dto.AuthResponse{Token: tok, Player: *player})
 }
 
-// hashPassword renvoie le hash bcrypt d'un mot de passe.
-// bcrypt intègre un sel aléatoire ; le hash fait 60 caractères.
+// hashPassword hash a password
 func hashPassword(password string) (string, error) {
 	h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -126,7 +122,7 @@ func hashPassword(password string) (string, error) {
 	return string(h), nil
 }
 
-// matchPassword vérifie qu'un mot de passe en clair correspond au hash stocké.
+// matchPassword controls if the password is a good one.
 func matchPassword(password, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }

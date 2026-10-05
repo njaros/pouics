@@ -1,4 +1,4 @@
-CREATE TABLE sets (
+CREATE TABLE colonies (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	player_id UUID REFERENCES players(id) ON DELETE CASCADE,
 	max_size INT,

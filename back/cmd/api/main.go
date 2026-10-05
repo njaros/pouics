@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 )
 
 // Apply the migrations in the migrations folder.
+// TODO: a better system to force any migration.
 func db_migration(database_url string) {
 	force := os.Getenv("MIGRATION_FORCE")
 	m, err := migrate.New("file://migrations", database_url)
