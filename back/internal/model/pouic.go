@@ -2,7 +2,8 @@ package model
 
 type Pouic struct {
     Id string               `json:"id"`
-    SetId string            `json:"set_id"`
+    ColonyId string         `json:"set_id"`
+    PlayerId string         `json:"player_id"`
     Name string             `json:"name"`
     Health int              `json:"health"`
     Happyness int           `json:"happyness"`

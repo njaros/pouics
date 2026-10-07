@@ -1,6 +1,6 @@
 package model
 
-type colony struct {
+type Colony struct {
     Id string       `json:"id"`
     PlayerId string `json:"player_id"`
     MaxSize int     `json:"max_size"`
