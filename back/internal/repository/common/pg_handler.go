@@ -15,7 +15,7 @@ type PgHandler struct {
 func NewPgHandler(pool *pgxpool.Pool) *PgHandler {
 	return &PgHandler{Pool: pool}
 }
-
+ 
 func (p *PgHandler) HandleGetResponse[T any](obj *T, err error) (*T, error) {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, repository.ErrPlayerNotFound

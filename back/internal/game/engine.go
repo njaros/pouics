@@ -20,3 +20,7 @@ type Engine struct {
 	hub Hub
 	lastSave time.Time
 }
+
+func (e *Engine) start() {
+	
+}

@@ -5,6 +5,7 @@ import (
 	"log"
 	"pouic/internal/model"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -31,11 +32,12 @@ func NewState(pool *pgxpool.Pool) *State {
 }
 
 func (s *State) LoadFromDb(ctx context.Context) {
-	
-
+	s.loadPlayers(ctx)
+	s.loadColonies(ctx)
+	s.loadPouics(ctx)
 }
 
-func (s *State)loadPlayers(ctx context.Context) {
+func (s *State) loadPlayers(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadPlayersQuery)
 	if err != nil {
 		log.Fatal("error: %v", err)
@@ -59,7 +61,7 @@ func (s *State)loadPlayers(ctx context.Context) {
 	}
 }
 
-func (s *State)loadColonies(ctx context.Context) {
+func (s *State) loadColonies(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadColoniesQuery)
 	if err != nil {
 		log.Fatal("error: %v", err)
@@ -83,7 +85,7 @@ func (s *State)loadColonies(ctx context.Context) {
 	}
 }
 
-func (s *State)loadPouics(ctx context.Context) {
+func (s *State) loadPouics(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadPouicsQuery)
 	if err != nil {
 		log.Fatal("error: %v", err)
@@ -107,8 +109,55 @@ func (s *State)loadPouics(ctx context.Context) {
 	}
 }
 
-func (s State) SaveToDb(ctx context.Context) error {
-	return nil
+func (s State) SaveToDb(ctx context.Context) {
+	batch := &pgx.Batch{}
+	for _, player := range s.Players {
+		for _, colony := range player.Colonies {
+			batch.Queue(
+				upsertColonyQuery,
+				colony.Colony.Id,
+				colony.Colony.PlayerId,
+				colony.Colony.MaxSize,
+				colony.Colony.PosX,
+				colony.Colony.PosY,
+				colony.Colony.TargetX,
+				colony.Colony.TargetY,
+				colony.Colony.Speed,
+			)
+			for _, pouic := range colony.Pouics {
+				batch.Queue(
+					upsertPouicQuery,
+					pouic.Id,
+					pouic.ColonyId,
+					pouic.PlayerId,
+					pouic.Name,
+					pouic.Health,
+					pouic.Happyness,
+					pouic.Stress,
+					pouic.Stats,
+					pouic.Brain,
+				)
+			}
+		}
+	}
+
+	batchResults := s.pool.SendBatch(ctx, batch)
+	defer batchResults.Close()
+
+	for _, player := range s.Players {
+		for _, colony := range player.Colonies {
+			_, err := batchResults.Exec()
+			if err != nil {
+				log.Printf("Error during upserting the colony: %v. Error: %v", colony, err)
+			}
+			for _, pouic := range colony.Pouics {
+				_, err := batchResults.Exec()
+				if err != nil {
+					log.Printf("Error during upserting the pouic: %v. Error: %v", pouic, err)
+				}
+			}
+		}
+	}
 }
 
 func (s *State) AddPlayer(player model.Player) {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"pouic/internal/websocket/command"
+	"pouic/internal/websocket/hub"
 
 	"github.com/gorilla/websocket"
 )
@@ -29,7 +30,7 @@ var (
 )
 
 type Hub interface {
-	AddClient(c Client)
+	AddClient(c hub.Client)
 	RemoveClient(id string)
 	AddCommand(command command.Command)
 }
@@ -54,7 +55,7 @@ func NewClient(hub Hub, parser Parser, id string, conn *websocket.Conn) *Client 
 		parser: parser,
 		toSend: make(chan []byte, 256),
 	}
-	c.hub.AddClient(c)
+	c.hub.AddClient(&c)
 	return &c
 }
 

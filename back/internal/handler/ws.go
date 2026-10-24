@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"pouic/internal/middleware"
@@ -15,14 +14,14 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func ServeWs(ctx context.Context, hub client.Hub, parser client.Parser, w http.ResponseWriter, r *http.Request) {
+func ServeWs(hub client.Hub, parser client.Parser, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	playerId, ok := middleware.PlayerIdFromContext(ctx)
+	playerId, ok := middleware.PlayerIdFromContext(r.Context())
 	if ok {
 		client := client.NewClient(hub, parser, playerId, conn)
 		client.Go()

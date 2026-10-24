@@ -1,9 +1,12 @@
 package handler
 
-import "pouic/internal/model"
+import (
+	"context"
+	"pouic/internal/model"
+)
 
 type PlayerStore interface {
-	GetById(id int) (*model.Player, error)
+	GetById(ctx context.Context, id string) (*model.Player, error)
 }
 
 type PlayerHandler struct {

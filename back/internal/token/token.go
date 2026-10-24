@@ -7,17 +7,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// ErrInvalidToken est renvoyée quand un token est absent, expiré, ou mal signé.
+// ErrInvalidToken is sent when a token is absent, expired, or not correctly signed.
 var ErrInvalidToken = errors.New("invalid token")
 
-// Manager génère et vérifie les JWT signés avec un secret HMAC.
-// Le secret est injecté via le constructeur (pas de variable globale).
+// Manager creates and controls signed JWT with an HMAC secret.
 type Manager struct {
 	secret []byte
 	ttl    time.Duration
 }
 
-// NewManager construit un Manager à partir du secret (TOKEN_SECRET).
+// NewManager build a Manager with a given secret.
 func NewManager(secret string) *Manager {
 	return &Manager{
 		secret: []byte(secret),
@@ -25,7 +24,7 @@ func NewManager(secret string) *Manager {
 	}
 }
 
-// Generate crée un JWT signé dont le sujet est l'identifiant utilisateur.
+// Generate create a signed JWT with the playerId as Subject.
 func (m *Manager) Generate(playerId string) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
@@ -37,7 +36,7 @@ func (m *Manager) Generate(playerId string) (string, error) {
 	return t.SignedString(m.secret)
 }
 
-// Verify valide la signature et l'expiration d'un token, et renvoie l'ID sujet.
+// Verify controls the token validity and returns the playerId from it.
 func (m *Manager) Verify(tokenString string) (string, error) {
 	claims := &jwt.RegisteredClaims{}
 	t, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (any, error) {
