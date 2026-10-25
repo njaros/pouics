@@ -6,6 +6,6 @@ CREATE TABLE pouics (
 	health INT,
 	happyness INT,
 	stress INT,
-	stats INT ARRAY[2],
-	brain FLOAT ARRAY[64][4]
+	stats INT[2],
+	brain FLOAT[64][4]
 );

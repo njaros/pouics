@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -34,11 +35,11 @@ func db_migration(database_url string) {
 		if to, err := strconv.Atoi(to_str); err != nil {
 			log.Fatal("unable to parse the migrations version: ", to_str)
 		} else if err := m.Force(to); err != nil {
-			log.Fatal("failed to m.Force()", err)
+			log.Fatal("failed to m.Force(): ", err)
 		}
 	}
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal("failed to m.Up()", err)
+		log.Fatal("failed to m.Up(): ", err)
 	}
 }
 
@@ -59,6 +60,13 @@ func get_db_pool(ctx context.Context) *pgxpool.Pool {
 func main() {
 	pool := get_db_pool(context.Background())
 	r := chi.NewRouter()
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+		AllowCredentials: true,
+		MaxAge: 300,
+	}))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Heartbeat("/health"))
 	r.Use(middleware.Recoverer)
@@ -89,6 +97,10 @@ func main() {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("hello"))
 		})
+	})
+
+	r.Get("/doc", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"body": "ceci est la doc"}`))
 	})
 
 	r.Group(func(r chi.Router) {
