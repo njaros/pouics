@@ -1,5 +1,6 @@
 package game
 
+// Each query should be atomic.
 const (
 	loadPlayersQuery = `
 		SELECT id, name FROM players
