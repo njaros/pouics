@@ -70,10 +70,10 @@ func (e *Engine) commandsReaderGoroutine() {
 // The routine admits that the State is static and he can do whatever he wants to it,
 // So the Command Reader must be stopped when the routine is running.
 func (e *Engine) routine() {
-	defer e.stateLocker.Unlock();
-	e.stateLocker.Lock();
-}
-
-func (e *Engine) collectQueries() {
-	//todo
+	defer e.stateLocker.Unlock()
+	colonies := e.s.GetColonies()
+	for _, colony := range colonies {
+		colony.Move()
+	}
+	e.stateLocker.Lock()
 }

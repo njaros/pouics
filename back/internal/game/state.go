@@ -31,6 +31,20 @@ func NewState(pool *pgxpool.Pool) *State {
 	}
 }
 
+// GETTERS
+
+func (s *State) GetColonies() []*model.Colony {
+	collect := []*model.Colony{}
+	for _, player := range s.Players {
+		for _, colony := range player.Colonies {
+			collect = append(collect, &colony.Colony)
+		}
+	}
+	return collect
+}
+
+// DB STUFFS
+
 func (s *State) LoadFromDb(ctx context.Context) {
 	s.loadPlayers(ctx)
 	s.loadColonies(ctx)
@@ -43,9 +57,7 @@ func (s *State) loadPlayers(ctx context.Context) {
 		log.Fatal("error: %v", err)
 	}
 
-	defer func() {
-		rows.Close()
-	}()
+	defer rows.Close()
 
 	var player model.Player
 
@@ -67,9 +79,7 @@ func (s *State) loadColonies(ctx context.Context) {
 		log.Fatal("error: %v", err)
 	}
 
-	defer func() {
-		rows.Close()
-	}()
+	defer rows.Close()
 
 	var colony model.Colony
 
@@ -91,9 +101,7 @@ func (s *State) loadPouics(ctx context.Context) {
 		log.Fatal("error: %v", err)
 	}
 
-	defer func() {
-		rows.Close()
-	}()
+	defer rows.Close()
 
 	var pouic model.Pouic
 
