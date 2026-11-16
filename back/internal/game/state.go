@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"pouic/internal/model"
 
@@ -10,12 +11,12 @@ import (
 )
 
 type ColonyPouics struct {
-	Colony model.Colony
-	Pouics map[string]model.Pouic
+	Colony *model.Colony
+	Pouics map[string]*model.Pouic
 }
 
 type PlayerColonies struct {
-	Player model.Player
+	Player *model.Player
 	Colonies map[string]ColonyPouics
 }
 
@@ -37,7 +38,7 @@ func (s *State) GetColonies() []*model.Colony {
 	collect := []*model.Colony{}
 	for _, player := range s.Players {
 		for _, colony := range player.Colonies {
-			collect = append(collect, &colony.Colony)
+			collect = append(collect, colony.Colony)
 		}
 	}
 	return collect
@@ -49,71 +50,81 @@ func (s *State) LoadFromDb(ctx context.Context) {
 	s.loadPlayers(ctx)
 	s.loadColonies(ctx)
 	s.loadPouics(ctx)
+	logString := "Players loaded: ["
+	for id, player := range s.Players {
+		logString += fmt.Sprintf("%s: %v, ", id, player)
+	}
+	logString += "]\n"
+	log.Print(logString)
 }
 
 func (s *State) loadPlayers(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadPlayersQuery)
 	if err != nil {
-		log.Fatal("error: %v", err)
+		log.Fatalf("State.loadPlayers Query error: %v", err)
 	}
 
 	defer rows.Close()
 
-	var player model.Player
-
-	if err := rows.Scan(player); err != nil {
-		log.Fatal("error: %v", err)
-	}
-	s.AddPlayer(player)
 	for ok := rows.Next(); ok == true; {
-		if err := rows.Scan(player); err != nil {
-			log.Fatal("error: %v", err)
+		var player model.Player
+
+		if err := rows.Scan(&player.Id, &player.Name); err != nil {
+			log.Fatalf("State.loadPlayers Scan error: %v", err)
 		}
-		s.AddPlayer(player)
+		s.AddPlayer(&player)
+		ok = rows.Next()
+	}
+	if err:= rows.Err(); err != nil {
+		log.Fatalf("State.loadPlayers rows.Err error: %v", err)
 	}
 }
 
 func (s *State) loadColonies(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadColoniesQuery)
 	if err != nil {
-		log.Fatal("error: %v", err)
+		log.Fatalf("State.loadColonies Query error: %v", err)
 	}
 
 	defer rows.Close()
 
-	var colony model.Colony
-
-	if err := rows.Scan(colony); err != nil {
-		log.Fatal("error: %v", err)
-	}
-	s.addColony(colony)
 	for ok := rows.Next(); ok == true; {
-		if err := rows.Scan(colony); err != nil {
-			log.Fatal("error: %v", err)
+		var colony model.Colony
+		if err := rows.Scan(
+			&colony.Id, &colony.PlayerId, &colony.MaxSize,
+			&colony.PosX, &colony.PosY, &colony.TargetX,
+			&colony.TargetY, &colony.Speed); err != nil {
+			log.Fatalf("State.loadColonies Scan error: %v", err)
 		}
-		s.addColony(colony)
+		s.addColony(&colony)
+		ok = rows.Next()
+	}
+	if err:= rows.Err(); err != nil {
+		log.Fatalf("State.loadColonies rows.Err error: %v", err)
 	}
 }
 
 func (s *State) loadPouics(ctx context.Context) {
 	rows, err := s.pool.Query(ctx, loadPouicsQuery)
 	if err != nil {
-		log.Fatal("error: %v", err)
+		log.Fatalf("State.loadPouics Query error: %v", err)
 	}
 
 	defer rows.Close()
 
-	var pouic model.Pouic
-
-	if err := rows.Scan(pouic); err != nil {
-		log.Fatal("error: %v", err)
-	}
-	s.addPouic(pouic)
 	for ok := rows.Next(); ok == true; {
-		if err := rows.Scan(pouic); err != nil {
-			log.Fatal("error: %v", err)
+		var pouic model.Pouic
+		if err := rows.Scan(
+			&pouic.Id, &pouic.ColonyId, &pouic.PlayerId,
+			&pouic.Name, &pouic.Health, &pouic.Happyness,
+			&pouic.Stress, &pouic.Stats, &pouic.Brain); err != nil {
+			log.Fatalf("State.loadPouics Scan error: %v", err)
 		}
-		s.addPouic(pouic)
+		s.addPouic(&pouic)
+		ok = rows.Next()
+	}
+	if err:= rows.Err(); err != nil {
+		log.Fatalf("State.loadPouics rows.Err error: %v", err)
 	}
 }
 
@@ -168,20 +179,20 @@ func (s State) SaveToDb(ctx context.Context) {
 	}
 }
 
-func (s *State) AddPlayer(player model.Player) {
+func (s *State) AddPlayer(player *model.Player) {
 	s.Players[player.Id] = PlayerColonies{
 		Player: player,
 		Colonies: make(map[string]ColonyPouics),
 	}
 }
 
-func (s *State) addColony(colony model.Colony) {
+func (s *State) addColony(colony *model.Colony) {
 	s.Players[colony.PlayerId].Colonies[colony.Id] = ColonyPouics{
 		Colony: colony,
-		Pouics: make(map[string]model.Pouic),
+		Pouics: make(map[string]*model.Pouic),
 	}
 }
 
-func (s *State) addPouic(pouic model.Pouic) {
+func (s *State) addPouic(pouic *model.Pouic) {
 	s.Players[pouic.PlayerId].Colonies[pouic.ColonyId].Pouics[pouic.Id] = pouic
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"pouic/internal/game"
 	"pouic/internal/handler"
 	myMiddlewares "pouic/internal/middleware"
 	"pouic/internal/repository/player"
@@ -84,11 +85,19 @@ func main() {
 	parser := command.NewParser(make(map[string]any))
 	hub := hub.NewHub()
 
+	// Engine set up
+	engine := game.NewEngine(pool, hub)
+
 	// API routes set up
 	authStore := player.NewRepository(pool)
 	authHandler := handler.NewAuthHandler(authStore, tokenManager)
 	// playerHandler := handler.NewPlayerHandler(authStore)
 
+	// Start engine and sockets hub goroutines
+	go hub.Run()
+	engine.Run()
+
+	// Create API's routes
 	r.Group(func(r chi.Router) {
 		r.Use(validator.RequireAuth)
 		r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {

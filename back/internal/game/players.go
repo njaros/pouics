@@ -8,4 +8,6 @@ type Players struct {
 	p map[Socket]model.Player
 }
 
-func (p *Players) Connect()
+func (p *Players) Connect() {
+	
+}

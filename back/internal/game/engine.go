@@ -10,11 +10,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Data interface {}
-
 type Hub interface {
 	GetCommands() chan command.Command
-	EmitTo(playerId string, data Data)
+	EmitTo(playerId string, data interface{})
 }
 
 type Engine struct {
@@ -25,10 +23,20 @@ type Engine struct {
 	lastSave time.Time
 }
 
-// Load the engine state from db, then run the engine routine.
-func (e *Engine) Start() {
+func NewEngine(pool *pgxpool.Pool, hub Hub) *Engine {
+	return &Engine{
+		s: *NewState(pool),
+		stateLocker: sync.Mutex{},
+		pool: pool,
+		hub: hub,
+		lastSave: time.Now(),
+	}
+}
+
+// Load the engine state from db, then run the engine goroutine.
+func (e *Engine) Run() {
 	e.s.LoadFromDb(context.Background());
-	e.run();
+	go e.run();
 }
 
 // Run the loop of the sim engine.

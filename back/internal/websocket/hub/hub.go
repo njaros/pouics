@@ -20,6 +20,7 @@ type Client interface {
 	Close()
 }
 
+// Return a Hub pointer. Do not forget to Run it.
 func NewHub() *Hub {
 	return &Hub{
 		players: make(map[string]Client),
@@ -42,7 +43,17 @@ func (h *Hub) AddCommand(command command.Command) {
 	log.Printf("command received: %v", command)
 }
 
-func (h *Hub) run() {
+func (h* Hub) GetCommands() chan command.Command {
+	return h.commands
+}
+
+func (h *Hub) EmitTo(playerId string, data interface{}) {
+	// TODO
+	// define precisely what data is
+	// emit a json strucutre ? binaries with metadata ?
+}
+
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.registers:
